@@ -23,6 +23,7 @@ export function toTitleCase(s: string): string {
 
 export function toCamelCase(s: string): string {
   const words = splitWords(s)
+  if (words.length === 0) return ''
   return words
     .map((w, i) =>
       i === 0
