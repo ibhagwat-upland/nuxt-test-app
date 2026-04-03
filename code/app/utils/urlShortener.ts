@@ -7,9 +7,12 @@ export interface ShortenResult {
 }
 
 export function isValidUrl(url: string): boolean {
+  if (!url || !url.trim()) return false
+  
   try {
-    new URL(url)
-    return true
+    const parsed = new URL(url)
+    // Check if protocol is http or https
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
   } catch {
     return false
   }
@@ -41,6 +44,11 @@ export function shortenUrl(url: string, domain: string = 'short.link'): ShortenR
       error: 'Please enter a URL',
       isValid: false
     }
+  }
+
+  // Validate domain
+  if (!domain || !domain.trim()) {
+    domain = 'short.link'
   }
 
   if (!isValidUrl(url)) {
