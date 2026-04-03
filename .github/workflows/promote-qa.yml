@@ -51,7 +51,7 @@ jobs:
           SERVICE_NAME: ${{ env.SERVICE_NAME }}
           NAMESPACE: ${{ env.NAMESPACE }}
         run: |
-          FILE="config-repo/apps/${NAMESPACE}/${SERVICE_NAME}/values/base.yaml"
+          FILE="config-repo/apps/${NAMESPACE}/${SERVICE_NAME}/values/qa.yaml"
           sed -i "s|\(image:.*:\).*|\1${IMAGE_TAG}|" "$FILE"
           grep -q "${IMAGE_TAG}" "$FILE" || { echo "::error::Failed to update image tag in $FILE"; exit 1; }
 
