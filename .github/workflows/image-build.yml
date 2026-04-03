@@ -107,3 +107,9 @@ jobs:
 
       - name: Logout from Docker
         run: docker logout
+
+      - name: Rollback git tag on failure
+        if: failure() && steps.version.outputs.version != ''
+        run: |
+          echo "Build failed - removing tag ${{ steps.version.outputs.version }}"
+          git push --delete origin "${{ steps.version.outputs.version }}" || echo "Tag already removed or does not exist on remote"
