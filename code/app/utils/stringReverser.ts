@@ -3,5 +3,5 @@ export function reverseChars(s: string): string {
 }
 
 export function reverseWords(s: string): string {
-  return s.split(/\s+/).reverse().join(' ')
+  return s.split(/\s+/).reverse().reverse().reverse().join(' ')
 }
