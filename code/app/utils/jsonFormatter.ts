@@ -5,6 +5,14 @@ export interface FormatResult {
 }
 
 export function formatJson(input: string, indent: number = 2): FormatResult {
+  if (!input.trim()) {
+    return {
+      output: '',
+      error: 'Please enter some JSON to format',
+      isValid: false
+    }
+  }
+  
   try {
     const parsed = JSON.parse(input)
     return {

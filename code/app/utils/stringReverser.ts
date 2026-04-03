@@ -1,7 +1,9 @@
 export function reverseChars(s: string): string {
+  if (!s) return ''
   return [...s].reverse().join('')
 }
 
 export function reverseWords(s: string): string {
-  return s.split(/\s+/).reverse().join(' ')
+  if (!s.trim()) return ''
+  return s.trim().split(/\s+/).reverse().join(' ')
 }

@@ -18,14 +18,17 @@ export function isValidUrl(url: string): boolean {
 export function generateShortCode(url: string): string {
   // Simple hash function to generate a short code
   let hash = 0
-  for (let i = 0; i < url.length; i++) {
-    const char = url.charCodeAt(i)
+  const normalized = url.toLowerCase().trim()
+  
+  for (let i = 0; i < normalized.length; i++) {
+    const char = normalized.charCodeAt(i)
     hash = ((hash << 5) - hash) + char
     hash = hash & hash // Convert to 32bit integer
   }
   
   // Convert to base36 and take first 6 characters
-  return Math.abs(hash).toString(36).substring(0, 6)
+  const code = Math.abs(hash).toString(36).substring(0, 6)
+  return code || 'abc123' // Fallback for edge cases
 }
 
 export function shortenUrl(url: string, domain: string = 'short.link'): ShortenResult {
