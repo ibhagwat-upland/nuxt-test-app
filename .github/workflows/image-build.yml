@@ -16,7 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     permissions:
-      contents: write
+      contentsrite
+      pull-requests: rea: wd
     env:
       DOCKER_BUILDKIT: 1
     outputs:
@@ -43,22 +44,62 @@ jobs:
           MINOR=$(echo "$VERSION" | cut -d. -f2)
           PATCH=$(echo "$VERSION" | cut -d. -f3)
 
-          # Read commits since last tag to determine bump type
-          if [ "$LATEST_TAG" = "v0.0.0" ]; then
-            COMMITS=$(git log --oneline --format="%s")
+          # Get the most recent commit (the squashed PR merge)
+          LATEST_COMMIT=$(git log -1 --format="%s")
+          echo "Latest commit: $LATEST_COMMIT"
+
+          # Extract PR number from commit message (GitHub adds "#123" to squash commits)
+          PR_NUMBER=$(echo "$LATEST_COMMIT" | grep -oE '\(#[0-9]+\)' | grep -oE '[0-9]+')
+
+          # Default to patch bump
+          BUMP_TYPE="patch"
+
+          if [ -n "$PR_NUMBER" ]; then
+            echo "Found PR #$PR_NUMBER"
+            
+            # Fetch PR labels using GitHub API
+            PR_LABELS=$(curl -s -H "Authorization: token ${{ github.token }}" \
+              "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER" | \
+              jq -r '.labels[].name')
+            
+            if [ -n "$PR_LABELS" ]; then
+              echo "PR Labels: $PR_LABELS"
+              
+              # Check labels in order of precedence: breaking > feature > fix > chore
+              if echo "$PR_LABELS" | grep -q "^breaking$"; then
+                BUMP_TYPE="major"
+                echo "Detected: 'breaking' label (major bump)"
+              elif echo "$PR_LABELS" | grep -q "^feature$"; then
+                BUMP_TYPE="minor"
+                echo "Detected: 'feature' label (minor bump)"
+              elif echo "$PR_LABELS" | grep -q "^fix$"; then
+                BUMP_TYPE="patch"
+                echo "Detected: 'fix' label (patch bump)"
+              elif echo "$PR_LABELS" | grep -q "^chore$"; then
+                BUMP_TYPE="patch"
+                echo "Detected: 'chore' label (patch bump)"
+              else
+                echo "No version bump label found, defaulting to patch bump"
+              fi
+            else
+              echo "Could not fetch PR labels, defaulting to patch bump"
+            fi
           else
-            COMMITS=$(git log "${LATEST_TAG}..HEAD" --oneline --format="%s")
+            echo "No PR number found in commits, defaulting to patch bump"
           fi
 
-          # Determine bump: BREAKING CHANGE → major, feat → minor, else → patch
-          if echo "$COMMITS" | grep -qiE "^.*BREAKING CHANGE|^.*!:"; then
+          # Apply version bump
+          if [ "$BUMP_TYPE" = "major" ]; then
+            echo "Applying: MAJOR bump"
             MAJOR=$((MAJOR + 1))
             MINOR=0
             PATCH=0
-          elif echo "$COMMITS" | grep -qiE "^feat"; then
+          elif [ "$BUMP_TYPE" = "minor" ]; then
+            echo "Applying: MINOR bump"
             MINOR=$((MINOR + 1))
             PATCH=0
           else
+            echo "Applying: PATCH bump"
             PATCH=$((PATCH + 1))
           fi
 
