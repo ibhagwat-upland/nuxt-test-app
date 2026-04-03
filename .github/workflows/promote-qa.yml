@@ -16,7 +16,7 @@ env:
 
 jobs:
   promote_to_qa:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout source repo
@@ -42,7 +42,7 @@ jobs:
         with:
           repository: ${{ env.ARGO_CONFIG_REPO }}
           ref: ${{ env.ARGO_CONFIG_REPO_BASE_BRANCH }}
-          token: ${{ secrets.TEMI_PAT }}
+          token: ${{ secrets.GH_PAT }}
           path: config-repo
 
       - name: Update Helm values
@@ -58,7 +58,7 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.TEMI_PAT }}
+          token: ${{ secrets.GH_PAT }}
           path: config-repo
           branch: "promote/qa-${{ steps.version.outputs.image-tag }}"
           base: ${{ env.ARGO_CONFIG_REPO_BASE_BRANCH }}
