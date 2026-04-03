@@ -1,0 +1,6 @@
+AZURE_CLIENT_ID=ph1
+AZURE_TENANT_ID=ph2
+AZURE_CLIENT_SECRET=ph3
+keyvault_name=ph4
+
+

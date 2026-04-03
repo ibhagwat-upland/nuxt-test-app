@@ -1,0 +1,8 @@
+name: base          # these dependencies needed for local dev in browser, do not delete file
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+ - jupyterlab=4.2.5
+ - nb_conda_kernels=2.5.1
+ - nbconvert 
