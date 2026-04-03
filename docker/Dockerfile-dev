@@ -1,0 +1,46 @@
+# Using miniforge as default image which come pre-installed with mamba and conda
+FROM --platform=linux/amd64 condaforge/miniforge3:24.7.1-0
+
+LABEL maintainer='modelops@uplandcapgroup.com'  
+
+# Install necessary dependencies
+RUN apt-get update \
+    && apt-get install -y sudo gnupg curl apt-transport-https \
+    && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y msodbcsql17 msodbcsql18 unixodbc-dev \
+    && apt-get -y autoremove \
+    && apt-get clean autoclean \
+    && rm -fr /var/lib/apt/lists/{apt,dpkg,cache,log} /tmp/* /var/tmp/*
+
+# Set working directory
+WORKDIR /home/build/
+COPY conda_environments conda_environments
+
+# Install updates to mamba environment needed to trigger jupyterlab
+# ========== Install Conda ==========
+RUN mamba env update -f conda_environments/default.yml \
+    && mamba env create -f conda_environments/minimal.yml \
+    && mamba env create -f conda_environments/utilities.yml \
+    && mamba env create -f conda_environments/utilities-snowflake.yml \
+    && conda clean --all --yes \
+    && mamba clean --all --yes 
+
+# Copies directories to be present in container
+# COPY entrypoints entrypoints
+# COPY images images
+COPY ucgutils ucgutils
+COPY data data
+COPY docker docker
+COPY notebooks notebooks
+COPY code code
+
+# define env variable -- bash for ServerApp.terminado_settings instead of default sh 
+ENV SHELL=/bin/bash
+
+# Expose any needed ports
+EXPOSE 8501 8888
+    
+# Run any CMD[commands] using the docker compose upon container launch
+# Run healthchecks also  using the docker compose upon container launch for every exposed port

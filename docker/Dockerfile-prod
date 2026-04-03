@@ -1,0 +1,54 @@
+# Production Dockerfile for XTL app
+FROM --platform=$BUILDPLATFORM node:22.18.0-alpine3.22 AS build
+
+LABEL maintainer="modelops@uplandcapgroup.com"
+
+# alpine package security patches
+RUN apk upgrade --no-cache
+
+WORKDIR /app
+RUN corepack enable
+
+ENV NODE_ENV=production
+
+# increase default nodejs heap size 
+ENV NODE_OPTIONS=--max-old-space-size=7168
+
+# Copy package files first for better layer caching
+COPY code/package.json code/pnpm-lock.yaml ./
+
+# Install dependencies
+RUN pnpm i --frozen-lockfile --prod=false
+
+# Copy source code
+COPY code/ ./
+
+# Build the project
+RUN pnpm run build
+
+# Production stage
+FROM --platform=$BUILDPLATFORM node:22.18.0-alpine3.22
+
+# alpine packages security patches
+RUN apk upgrade --no-cache
+
+WORKDIR /app
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nuxtjs && \
+    adduser -S nuxtjs -u 1001 -G nuxtjs
+
+# Copy built application
+COPY --from=build --chown=nuxtjs:nuxtjs /app/.output/ ./
+
+# Set runtime environment
+ENV PORT=8501
+ENV HOST=0.0.0.0
+ENV NODE_ENV=production
+
+# Switch to non-root user
+USER nuxtjs
+
+EXPOSE 8501
+
+CMD ["node", "/app/server/index.mjs"]

@@ -1,0 +1,34 @@
+services:
+  release-mgmt-test:      # rename the service appropriately to suit your needs
+    container_name: release-mgmt-test_container  # rename appropriately per model being developed      
+    deploy:
+        resources:
+          limits:
+            cpus: '4.0'
+            memory: '16G'
+    build: 
+      dockerfile: ./docker/Dockerfile-dev
+      context: ./
+    image: release-mgmt-test:v3       # rename the image appropriately
+    env_file:
+      - env_dev             # ensure you create a file in local repo folder with relevant env variables
+
+    ports:
+      - "8888:8888"                      # for local dev, jupyterlab is located on this port
+      - "127.0.0.1:8501:8501"            # for local dev, streamlit defaults to this port
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888"]  # test container health
+      interval: 30s       # Time between checks
+      timeout: 15s        # Maximum time to allow the test to run 
+      retries: 3          # Consecutive failures to indicate unhealthy container 
+      start_period: 5s    # Wait time before starting health checks on container start
+
+    volumes:              # mounts all local folders specified into the running container instance
+      - ./data:/home/build/data
+      - ./code:/home/build/code
+      - ./conda_environments:/home/build/conda_environments
+      - ./ucgutils:/home/build/ucgutils
+
+    command:               # open a jupyterlab instance in browser bind to host, default 8888 
+      jupyter lab --no-browser --ip=0.0.0.0 --allow-root --IdentityProvider.token="local_dev"
