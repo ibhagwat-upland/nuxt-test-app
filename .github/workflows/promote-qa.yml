@@ -1,0 +1,83 @@
+name: Promote to QA
+
+on:
+  workflow_run:
+    workflows: ["Docker Image Build"]
+    types:
+      - completed
+    branches:
+      - main
+
+env:
+  ARGO_CONFIG_REPO: ibhagwat-upland/ishaan-argocd-repo
+  ARGO_CONFIG_REPO_BASE_BRANCH: main
+  SERVICE_NAME: nuxt-test-app
+  NAMESPACE: rad-application
+
+jobs:
+  promote_to_qa:
+    runs-on: self-hosted
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve image tag from latest git tag
+        id: version
+        run: |
+          LATEST_TAG=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+          if [ -z "$LATEST_TAG" ]; then
+            echo "::error::No version tags found. Image build may not have pushed a tag yet."
+            exit 1
+          fi
+          SHORT_SHA=$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)
+          IMAGE_TAG="${LATEST_TAG}-${SHORT_SHA}"
+          echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Promoting image tag: ${IMAGE_TAG}"
+
+      - name: Checkout the argo-config repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ARGO_CONFIG_REPO }}
+          ref: ${{ env.ARGO_CONFIG_REPO_BASE_BRANCH }}
+          token: ${{ secrets.TEMI_PAT }}
+          path: config-repo
+
+      - name: Update Helm values
+        env:
+          IMAGE_TAG: ${{ steps.version.outputs.image-tag }}
+          SERVICE_NAME: ${{ env.SERVICE_NAME }}
+          NAMESPACE: ${{ env.NAMESPACE }}
+        run: |
+          FILE="config-repo/apps/${NAMESPACE}/${SERVICE_NAME}/values/base.yaml"
+          sed -i "s|\(image:.*:\).*|\1${IMAGE_TAG}|" "$FILE"
+          grep -q "${IMAGE_TAG}" "$FILE" || { echo "::error::Failed to update image tag in $FILE"; exit 1; }
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.TEMI_PAT }}
+          path: config-repo
+          branch: "promote/qa-${{ steps.version.outputs.image-tag }}"
+          base: ${{ env.ARGO_CONFIG_REPO_BASE_BRANCH }}
+          title: "chore(${{ env.SERVICE_NAME }}): promote to QA — ${{ steps.version.outputs.image-tag }}"
+          body: |
+            ## Automated Helm Values Update
+
+            | Field       | Value                                     |
+            |-------------|-------------------------------------------|
+            | **Service** | `${{ env.SERVICE_NAME }}`                 |
+            | **New Tag** | `${{ steps.version.outputs.image-tag }}`  |
+            | **Actor**   | `@${{ github.actor }}`                    |
+            | **Env**     | `qa`                                      |
+
+            ### Files updated
+            - `apps/${{ env.NAMESPACE }}/${{ env.SERVICE_NAME }}/values/base.yaml`
+
+            ---
+            _This PR was created automatically by the promotion workflow._
+          labels: |
+            automated
+            qa-release
