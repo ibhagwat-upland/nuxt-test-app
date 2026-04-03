@@ -3,7 +3,6 @@
 
 
 ## Type of Change
-<!-- ⚠️ REQUIRED: Add exactly ONE label to this PR -->
 
 Add one of these labels using the Labels section in the right sidebar →
 
