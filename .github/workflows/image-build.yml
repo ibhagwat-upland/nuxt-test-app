@@ -16,8 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     permissions:
-      contentsrite
-      pull-requests: rea: wd
+      contents: write
+      pull-requests: read
     env:
       DOCKER_BUILDKIT: 1
     outputs:
