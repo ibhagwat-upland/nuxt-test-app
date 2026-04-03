@@ -29,8 +29,9 @@ export function countText(text: string): TextStats {
   // Count lines (split by line breaks)
   const lines = text.split(/\n/).length
   
-  // Count sentences (basic - ends with . ! ? followed by space or end)
-  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0).length
+  // Count sentences (improved - handle multiple punctuation and abbreviations)
+  const sentenceEnders = text.match(/[.!?]+(?=\s|$)/g)
+  const sentences = sentenceEnders ? sentenceEnders.length : (text.trim() ? 1 : 0)
   
   // Count paragraphs (separated by empty lines)
   const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0).length

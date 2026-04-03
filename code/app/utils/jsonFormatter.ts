@@ -20,15 +20,27 @@ export function formatJson(input: string, indent: number = 2): FormatResult {
       isValid: true
     }
   } catch (error) {
+    let errorMsg = 'Invalid JSON'
+    if (error instanceof SyntaxError) {
+      errorMsg = error.message
+    }
     return {
       output: '',
-      error: error instanceof Error ? error.message : 'Invalid JSON',
+      error: errorMsg,
       isValid: false
     }
   }
 }
 
 export function minifyJson(input: string): FormatResult {
+  if (!input.trim()) {
+    return {
+      output: '',
+      error: 'Please enter some JSON to minify',
+      isValid: false
+    }
+  }
+  
   try {
     const parsed = JSON.parse(input)
     return {
@@ -36,9 +48,13 @@ export function minifyJson(input: string): FormatResult {
       isValid: true
     }
   } catch (error) {
+    let errorMsg = 'Invalid JSON'
+    if (error instanceof SyntaxError) {
+      errorMsg = error.message
+    }
     return {
       output: '',
-      error: error instanceof Error ? error.message : 'Invalid JSON',
+      error: errorMsg,
       isValid: false
     }
   }

@@ -1,7 +1,10 @@
 function splitWords(s: string): string[] {
+  if (!s) return []
   return s
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/([a-zA-Z])(\d)/g, '$1 $2')
+    .replace(/(\d)([a-zA-Z])/g, '$1 $2')
     .split(/[\s_\-]+/)
     .filter(Boolean)
 }
@@ -34,9 +37,13 @@ export function toCamelCase(s: string): string {
 }
 
 export function toSnakeCase(s: string): string {
-  return splitWords(s).map((w) => w.toLowerCase()).join('_')
+  const words = splitWords(s)
+  if (words.length === 0) return ''
+  return words.map((w) => w.toLowerCase()).join('_')
 }
 
 export function toKebabCase(s: string): string {
-  return splitWords(s).map((w) => w.toLowerCase()).join('-')
+  const words = splitWords(s)
+  if (words.length === 0) return ''
+  return words.map((w) => w.toLowerCase()).join('-')
 }
