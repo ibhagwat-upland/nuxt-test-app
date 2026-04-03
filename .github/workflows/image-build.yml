@@ -102,8 +102,14 @@ jobs:
           tags: |
             ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.image-tag }}
             ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=local,src=/datadrive/.cache-docker
-          cache-to: type=local,dest=/datadrive/.cache-docker
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Logout from Docker
         run: docker logout
+
+      - name: Rollback git tag on failure
+        if: failure() && steps.version.outputs.version != ''
+        run: |
+          echo "Build failed - removing tag ${{ steps.version.outputs.version }}"
+          git push --delete origin "${{ steps.version.outputs.version }}" || echo "Tag already removed or does not exist on remote"
