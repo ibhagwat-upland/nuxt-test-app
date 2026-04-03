@@ -1,0 +1,54 @@
+name: PR Validation
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, labeled, unlabeled]
+
+jobs:
+  validate-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for required version bump label
+        run: |
+          LABELS='${{ toJSON(github.event.pull_request.labels.*.name) }}'
+          
+          echo "PR Labels: $LABELS"
+          
+          # Check for version bump labels
+          HAS_BREAKING=$(echo "$LABELS" | grep -c '"breaking"' || true)
+          HAS_FEATURE=$(echo "$LABELS" | grep -c '"feature"' || true)
+          HAS_FIX=$(echo "$LABELS" | grep -c '"fix"' || true)
+          HAS_PATCH=$(echo "$LABELS" | grep -c '"patch"' || true)
+          HAS_CHORE=$(echo "$LABELS" | grep -c '"chore"' || true)
+          
+          TOTAL=$((HAS_BREAKING + HAS_FEATURE + HAS_FIX + HAS_PATCH + HAS_CHORE))
+          
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "ERROR: No version bump label found"
+            echo ""
+            echo "Please add exactly ONE of these labels:"
+            echo "  • breaking (major bump)"
+            echo "  • feature (minor bump)"
+            echo "  • fix (patch bump)"
+            echo "  • patch (patch bump)"
+            echo "  • chore (patch bump)"
+            echo ""
+            echo "Add labels using the Labels section in the right sidebar →"
+            exit 1
+          elif [ "$TOTAL" -gt 1 ]; then
+            echo "WARNING: Multiple version bump labels detected"
+            echo "Please use only ONE label. Precedence: breaking > feature > fix > patch > chore"
+          fi
+          
+          # Show which version bump will occur
+          if [ "$HAS_BREAKING" -gt 0 ]; then
+            echo "Label: breaking → MAJOR bump (X.0.0)"
+          elif [ "$HAS_FEATURE" -gt 0 ]; then
+            echo "Label: feature → MINOR bump (0.X.0)"
+          elif [ "$HAS_FIX" -gt 0 ]; then
+            echo "Label: fix → PATCH bump (0.0.X)"
+          elif [ "$HAS_PATCH" -gt 0 ]; then
+            echo "Label: patch → PATCH bump (0.0.X)"
+          elif [ "$HAS_CHORE" -gt 0 ]; then
+            echo "Label: chore → PATCH bump (0.0.X)"
+          fi

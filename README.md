@@ -1,1 +1,1 @@
-# nuxt-test-app
+# Nuxt Test App

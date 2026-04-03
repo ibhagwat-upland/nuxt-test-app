@@ -17,6 +17,7 @@ jobs:
     environment: dev
     permissions:
       contents: write
+      pull-requests: read
     env:
       DOCKER_BUILDKIT: 1
     outputs:
@@ -26,6 +27,31 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Get PR labels
+        id: pr-labels
+        run: |
+          # Get the most recent commit (the squashed PR merge)
+          LATEST_COMMIT=$(git log -1 --format="%s")
+          echo "Latest commit: $LATEST_COMMIT"
+
+          # Extract PR number from commit message (GitHub adds "#123" to squash commits)
+          PR_NUMBER=$(echo "$LATEST_COMMIT" | grep -oE '\(#[0-9]+\)' | grep -oE '[0-9]+')
+
+          if [ -n "$PR_NUMBER" ]; then
+            echo "Found PR #$PR_NUMBER"
+            
+            # Fetch PR labels using GitHub API
+            PR_LABELS=$(curl -s -H "Authorization: token ${{ github.token }}" \
+              "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER" | \
+              jq -r '.labels[].name' | tr '\n' ',' | sed 's/,$//')
+            
+            echo "PR Labels: $PR_LABELS"
+            echo "labels=$PR_LABELS" >> "$GITHUB_OUTPUT"
+          else
+            echo "No PR number found in commit"
+            echo "labels=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Compute next semantic version
         id: version
@@ -43,22 +69,23 @@ jobs:
           MINOR=$(echo "$VERSION" | cut -d. -f2)
           PATCH=$(echo "$VERSION" | cut -d. -f3)
 
-          # Read commits since last tag to determine bump type
-          if [ "$LATEST_TAG" = "v0.0.0" ]; then
-            COMMITS=$(git log --oneline --format="%s")
-          else
-            COMMITS=$(git log "${LATEST_TAG}..HEAD" --oneline --format="%s")
-          fi
-
-          # Determine bump: BREAKING CHANGE → major, feat → minor, else → patch
-          if echo "$COMMITS" | grep -qiE "^.*BREAKING CHANGE|^.*!:"; then
+          # Get labels from previous step (guaranteed by PR validation)
+          PR_LABELS="${{ steps.pr-labels.outputs.labels }}"
+          echo "PR Labels: $PR_LABELS"
+          
+          # Check labels and apply bump (precedence: breaking > feature > fix/chore)
+          if echo "$PR_LABELS" | grep -q "breaking"; then
+            echo "Detected: 'breaking' label → MAJOR bump"
             MAJOR=$((MAJOR + 1))
             MINOR=0
             PATCH=0
-          elif echo "$COMMITS" | grep -qiE "^feat"; then
+          elif echo "$PR_LABELS" | grep -q "feature"; then
+            echo "Detected: 'feature' label → MINOR bump"
             MINOR=$((MINOR + 1))
             PATCH=0
           else
+            # fix or chore label → PATCH bump
+            echo "Detected: 'fix' or 'chore' label → PATCH bump"
             PATCH=$((PATCH + 1))
           fi
 
@@ -78,8 +105,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "${{ steps.version.outputs.version }}"
-          git push origin "${{ steps.version.outputs.version }}"
+          git tag "${{ steps.tag.outputs.image-tag }}"
+          git push origin "${{ steps.tag.outputs.image-tag }}"
 
       - name: Set up Docker buildx env
         uses: docker/setup-buildx-action@v3
@@ -109,7 +136,7 @@ jobs:
         run: docker logout
 
       - name: Rollback git tag on failure
-        if: failure() && steps.version.outputs.version != ''
+        if: failure() && steps.tag.outputs.image-tag != ''
         run: |
-          echo "Build failed - removing tag ${{ steps.version.outputs.version }}"
-          git push --delete origin "${{ steps.version.outputs.version }}" || echo "Tag already removed or does not exist on remote"
+          echo "Build failed - removing tag ${{ steps.tag.outputs.image-tag }}"
+          git push --delete origin "${{ steps.tag.outputs.image-tag }}" || echo "Tag already removed or does not exist on remote"
