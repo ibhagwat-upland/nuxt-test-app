@@ -23,7 +23,8 @@ export function countText(text: string): TextStats {
   const charactersNoSpaces = text.replace(/\s/g, '').length
   
   // Count words (split by whitespace, filter empty strings)
-  const words = text.trim().split(/\s+/).filter(Boolean).length
+  const trimmed = text.trim()
+  const words = trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0
   
   // Count lines (split by line breaks)
   const lines = text.split(/\n/).length
