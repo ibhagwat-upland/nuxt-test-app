@@ -4,7 +4,8 @@ const tabs = [
   { label: 'String Reverser', value: 'string-reverser' },
   { label: 'Text Counter', value: 'text-counter' },
   { label: 'JSON Formatter', value: 'json-formatter' },
-  { label: 'URL Shortener', value: 'url-shortener' }
+  { label: 'URL Shortener', value: 'url-shortener' },
+  { label: 'Hash Generator', value: 'hash-generator' }
 ]
 
 const activeTab = ref('case-converter')
@@ -35,6 +36,7 @@ const activeTab = ref('case-converter')
       <TextCounter v-if="activeTab === 'text-counter'" />
       <JsonFormatter v-if="activeTab === 'json-formatter'" />
       <UrlShortener v-if="activeTab === 'url-shortener'" />
+      <HashGenerator v-if="activeTab === 'hash-generator'" />
     </main>
   </div>
 </template>
