@@ -102,8 +102,8 @@ jobs:
           tags: |
             ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.image-tag }}
             ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=local,src=/datadrive/.cache-docker
-          cache-to: type=local,dest=/datadrive/.cache-docker
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Logout from Docker
         run: docker logout
