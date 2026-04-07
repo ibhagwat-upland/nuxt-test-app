@@ -2,7 +2,8 @@ name: Docker Image Build
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
+    types: [closed]
     branches:
       - main
 
@@ -13,45 +14,21 @@ env:
 
 jobs:
   Build-On-Runner:
+    # Only run if PR was merged (not just closed)
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     environment: dev
     permissions:
       contents: write
-      pull-requests: read
     env:
       DOCKER_BUILDKIT: 1
     outputs:
       image-tag: ${{ steps.tag.outputs.image-tag }}
     steps:
       - name: Checkout current branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
-      - name: Get PR labels
-        id: pr-labels
-        run: |
-          # Get the most recent commit (the squashed PR merge)
-          LATEST_COMMIT=$(git log -1 --format="%s")
-          echo "Latest commit: $LATEST_COMMIT"
-
-          # Extract PR number from commit message (GitHub adds "#123" to squash commits)
-          PR_NUMBER=$(echo "$LATEST_COMMIT" | grep -oE '\(#[0-9]+\)' | grep -oE '[0-9]+')
-
-          if [ -n "$PR_NUMBER" ]; then
-            echo "Found PR #$PR_NUMBER"
-            
-            # Fetch PR labels using GitHub API
-            PR_LABELS=$(curl -s -H "Authorization: token ${{ github.token }}" \
-              "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER" | \
-              jq -r '.labels[].name' | tr '\n' ',' | sed 's/,$//')
-            
-            echo "PR Labels: $PR_LABELS"
-            echo "labels=$PR_LABELS" >> "$GITHUB_OUTPUT"
-          else
-            echo "No PR number found in commit"
-            echo "labels=" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Compute next semantic version
         id: version
@@ -69,17 +46,14 @@ jobs:
           MINOR=$(echo "$VERSION" | cut -d. -f2)
           PATCH=$(echo "$VERSION" | cut -d. -f3)
 
-          # Get labels from previous step (guaranteed by PR validation)
-          PR_LABELS="${{ steps.pr-labels.outputs.labels }}"
-          echo "PR Labels: $PR_LABELS"
-          
-          # Check labels and apply bump (precedence: breaking > feature > fix/chore)
-          if echo "$PR_LABELS" | grep -q "breaking"; then
+          # Check labels from PR event (guaranteed by PR validation)
+          # Precedence: breaking > feature > fix/chore
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'breaking') }}" == "true" ]]; then
             echo "Detected: 'breaking' label → MAJOR bump"
             MAJOR=$((MAJOR + 1))
             MINOR=0
             PATCH=0
-          elif echo "$PR_LABELS" | grep -q "feature"; then
+          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'feature') }}" == "true" ]]; then
             echo "Detected: 'feature' label → MINOR bump"
             MINOR=$((MINOR + 1))
             PATCH=0
@@ -96,8 +70,7 @@ jobs:
       - name: Generate image tag
         id: tag
         run: |
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          IMAGE_TAG="${{ steps.version.outputs.version }}-${SHORT_SHA}"
+          IMAGE_TAG="${{ steps.version.outputs.version }}
           echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "Image tag: ${IMAGE_TAG}"
 
