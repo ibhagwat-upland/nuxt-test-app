@@ -18,6 +18,7 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
+// Here is a test comment
 export function generateShortCode(url: string): string {
   // Simple hash function to generate a short code
   let hash = 0
