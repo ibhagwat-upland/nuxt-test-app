@@ -1,27 +1,31 @@
-name: Require dev merge before main
+name: Enfore Merge Order
 
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
-  check-dev-merge:
+  Check-Source-Branch:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
       contents: read
+    
     steps:
-      - name: Verify branch was squash-merged to dev first
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Enforce branch promotion order
         uses: actions/github-script@v7
         with:
           script: |
+            // get feature branch name
             const headRef = context.payload.pull_request.head.ref;
-            const headSha = context.payload.pull_request.head.sha;
-            const currentPrCreatedAt = new Date(context.payload.pull_request.created_at);
 
-            // Find closed PRs from the same head branch targeting dev
-            const { data: devPRs } = await github.rest.pulls.list({
+            // find closed PRs in DEV from the feature branch
+            const { data: closedDevPRsFromFeatureBranch } = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'closed',
@@ -30,22 +34,20 @@ jobs:
               per_page: 50,
             });
 
-            const mergedDevPRs = devPRs.filter(pr => pr.merged_at !== null);
+            // get PR that was merged into DEV from feature branch
+            const mergedDevPRsFromFeatureBranch = closedDevPRsFromFeatureBranch.filter(pr => pr.merged_at !== null);
 
-            if (mergedDevPRs.length === 0) {
+
+            // fail if no merged (& closed) PRs found in DEV from feature branch
+            if (mergedDevPRsFromFeatureBranch.length === 0) {
               core.setFailed(
-                `Branch "${headRef}" has not been squash-merged into dev. ` +
-                `Please merge to dev first to validate in the sandbox before merging to main.`
+                `Failure: Branch "${headRef}" has not been squash-merged into dev. ` +
+                `Please merge to dev first before merging to main.`
               );
               return;
             }
 
-            // Optional: enforce that the dev merge happened before this PR was opened
-            const mostRecentDevMerge = mergedDevPRs
-              .map(pr => new Date(pr.merged_at))
-              .sort((a, b) => b - a)[0];
-
             console.log(
-              `✓ Branch "${headRef}" was merged to dev at ${mostRecentDevMerge.toISOString()} ` +
-              `(PR to main opened ${currentPrCreatedAt.toISOString()})`
+              `Success: Branch "${headRef}" was merged to dev before attempting to merge into main.`
             );
+        
