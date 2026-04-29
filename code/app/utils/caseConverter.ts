@@ -1,3 +1,4 @@
+// Adding some comment that should fail
 function splitWords(s: string): string[] {
   if (!s) return []
   return s
