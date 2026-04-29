@@ -18,6 +18,7 @@ export function toLowerCase(s: string): string {
 }
 
 export function toTitleCase(s: string): string {
+  // Here is a test comment change
   return s.replace(
     /\w\S*/g,
     (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase()
