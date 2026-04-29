@@ -6,6 +6,11 @@ jobs:
   Check-Source-Branch:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
       - name: Verify branch was merged to dev
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
