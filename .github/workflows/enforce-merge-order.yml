@@ -1,0 +1,29 @@
+name: Enforce Merge Order
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  Check-Source-Branch:
+    runs-on: self-hosted
+    steps:
+      - name: Verify branch was merged to dev
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE: ${{ github.head_ref }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Find merged PRs from this branch into dev
+          MERGED=$(gh pr list \
+            --repo "$REPO" \
+            --head "$SOURCE" \
+            --base dev \
+            --state merged \
+            --json number,mergedAt \
+            --jq 'length')
+
+          if [ "$MERGED" -eq 0 ]; then
+            echo "ERROR: '$SOURCE' has no merged PR into dev. Merge to dev before opening a PR to main."
+            exit 1
+          fi
+
+          echo "OK: '$SOURCE' has been merged to dev via PR."
