@@ -25,6 +25,7 @@ export function toTitleCase(s: string): string {
   )
 }
 
+// Adding another change
 export function toCamelCase(s: string): string {
   const words = splitWords(s)
   if (words.length === 0) return ''
