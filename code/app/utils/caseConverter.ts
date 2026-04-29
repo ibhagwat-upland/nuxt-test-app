@@ -11,6 +11,7 @@ function splitWords(s: string): string[] {
     .filter(Boolean)
 }
 
+//some more comment
 export function toUpperCase(s: string): string {
   return s.toUpperCase()
 }
