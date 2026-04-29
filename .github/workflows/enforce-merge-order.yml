@@ -4,7 +4,7 @@ on:
     branches: [main]
 jobs:
   Check-Source-Branch:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Verify branch was merged to dev
         env:
