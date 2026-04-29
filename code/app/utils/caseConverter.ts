@@ -1,3 +1,4 @@
+// Adding some example comment
 function splitWords(s: string): string[] {
   if (!s) return []
   return s
