@@ -16,7 +16,7 @@ env:
 
 jobs:
   promote_to_qa:
-    runs-on: ubuntu-latest
+    runs-on: rad-arc-dev-rad000
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout source repo

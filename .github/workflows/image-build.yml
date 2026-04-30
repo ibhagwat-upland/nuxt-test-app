@@ -13,7 +13,7 @@ env:
 
 jobs:
   Build-On-Runner:
-    runs-on: ubuntu-latest
+    runs-on: rad-arc-dev-rad000
     environment: dev
     permissions:
       contents: write
